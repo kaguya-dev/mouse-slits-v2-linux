@@ -1,0 +1,2 @@
+# Clanm Mouse Slits V2 (A825 Gaming Mouse)
+KERNEL=="hidraw*", ATTRS{idVendor}=="30fa", ATTRS{idProduct}=="1040", MODE="0660", TAG+="uaccess"

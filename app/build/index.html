@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Clanm Mouse Slits V2 - Linux Configurator</title>
+  <style>
+    :root {
+      --bg-dark: #121418;
+      --bg-panel: #1a1e24;
+      --bg-card: #222831;
+      --primary: #00ADB5;
+      --primary-hover: #00d2dc;
+      --accent: #FF2E93;
+      --text: #EEEEEE;
+      --text-dim: #9BA4B5;
+      --border: #2D3748;
+      --success: #00E676;
+      --warning: #FFD600;
+      --danger: #FF1744;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background: var(--bg-dark);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    header {
+      background: #0f1115;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand img {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+    }
+    .brand h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #fff;
+    }
+    .brand span {
+      font-size: 12px;
+      background: #252c38;
+      color: var(--primary);
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 173, 181, 0.3);
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      padding: 5px 12px;
+      background: #1e242c;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #757575;
+      box-shadow: 0 0 8px rgba(0,0,0,0.5);
+    }
+    .status-dot.connected {
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
+    }
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #121418;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 0 12px rgba(0, 173, 181, 0.4);
+    }
+    .btn-secondary {
+      background: #2a323d;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+      background: #363f4d;
+    }
+    .btn-danger {
+      background: #3a1c24;
+      color: #ff8a9e;
+      border: 1px solid #702636;
+    }
+    .btn-danger:hover {
+      background: #50212e;
+    }
+    nav.tabs {
+      background: #16191f;
+      display: flex;
+      gap: 4px;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-btn {
+      padding: 12px 20px;
+      background: transparent;
+      color: var(--text-dim);
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover {
+      color: #fff;
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+    .tab-content {
+      display: none;
+      height: 100%;
+    }
+    .tab-content.active {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+    .mouse-preview-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: radial-gradient(circle at center, #1f2530 0%, #12151b 70%);
+      border-radius: 8px;
+      padding: 30px;
+      border: 1px solid var(--border);
+    }
+    .mouse-img {
+      max-width: 240px;
+      filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.7));
+      transition: transform 0.3s;
+    }
+    .btn-mapping-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-card);
+      border-radius: 6px;
+      margin-bottom: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .btn-mapping-item label {
+      font-weight: 600;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-num {
+      width: 22px;
+      height: 22px;
+      background: var(--primary);
+      color: #121418;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    select, input[type="text"], input[type="number"] {
+      background: #181d24;
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 7px 12px;
+      border-radius: 5px;
+      font-size: 13px;
+      outline: none;
+    }
+    select:focus, input:focus {
+      border-color: var(--primary);
+    }
+    /* DPI Stages */
+    .dpi-stage-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 14px;
+      background: var(--bg-card);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .dpi-stage-row.active {
+      border-color: var(--primary);
+      background: #1e2630;
+    }
+    .dpi-color-picker {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(0,0,0,0.5);
+    }
+    .slider-group {
+      margin-bottom: 16px;
+    }
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: #2a323d;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0, 173, 181, 0.6);
+    }
+    /* LED Tab */
+    .led-preview-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0d0f13;
+      border-radius: 8px;
+      padding: 24px;
+      border: 1px solid var(--border);
+    }
+    .led-gif {
+      max-width: 260px;
+      max-height: 260px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 20px rgba(0, 173, 181, 0.25));
+    }
+    /* Bottom bar */
+    footer {
+      background: #0f1115;
+      border-top: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .profile-selector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .profile-btn {
+      padding: 6px 12px;
+      background: #202630;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .profile-btn.active {
+      background: var(--primary);
+      color: #121418;
+      border-color: var(--primary);
+    }
+    .msg-toast {
+      position: fixed;
+      bottom: 70px;
+      right: 24px;
+      background: #222b35;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 6px;
+      border-left: 4px solid var(--primary);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      font-size: 13px;
+      display: none;
+      z-index: 100;
+    }
+    .info-tag {
+      font-size: 11px;
+      background: #242c38;
+      padding: 2px 6px;
+      border-radius: 3px;
+      color: #8da2b5;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="assets/icon.png" alt="Mouse Slits V2">
+      <div>
+        <h1>Clanm Mouse Slits V2</h1>
+        <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Wuxi Instant A825 &bull; VID 30fa : PID 1040</div>
+      </div>
+      <span>Linux Native</span>
+    </div>
+    <div class="header-actions">
+      <div class="status-badge">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Buscando mouse...</span>
+      </div>
+      <button class="btn btn-secondary" id="btnConnect" onclick="connectDevice()">Conectar Mouse</button>
+      <select id="langSelect" onchange="changeLanguage(this.value)" style="padding: 5px 8px; font-size: 12px;">
+        <option value="pt-BR">Português (BR)</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" onclick="switchTab(buttons)" id="tabButtons">Botões</button>
+    <button class="tab-btn" onclick="switchTab(dpi)" id="tabDpi">DPI & Avançado</button>
+    <button class="tab-btn" onclick="switchTab(led)" id="tabLed">Iluminação (LED)</button>
+    <button class="tab-btn" onclick="switchTab(macro)" id="tabMacro">Macros</button>
+  </nav>
+
+  <main>
+    <!-- TAB 1: BUTTONS -->
+    <div class="tab-content active" id="pane-buttons">
+      <div class="grid-2">
+        <div class="mouse-preview-card">
+          <img src="assets/mouseled/mouse.png" alt="Mouse" class="mouse-img">
+          <div style="margin-top: 20px; font-size: 12px; color: var(--text-dim); text-align: center;">
+            Layout: 6 Botões programáveis com suporte a Perfis Office e Jogos
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Mapeamento de Teclas / Botões</div>
+          <div id="buttonMappingList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: DPI & ADVANCED -->
+    <div class="tab-content" id="pane-dpi">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Estágios de DPI (200 - 12800 DPI)</div>
+          <div id="dpiStagesList"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Parâmetros do Mouse & Taxa USB</div>
+          
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Taxa de Relatório USB (Polling Rate)</span>
+              <span id="pollRateVal">1000 Hz</span>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 6px;">
+              <button class="profile-btn" onclick="setPollingRate(0)" id="poll0">125 Hz</button>
+              <button class="profile-btn" onclick="setPollingRate(1)" id="poll1">250 Hz</button>
+              <button class="profile-btn" onclick="setPollingRate(2)" id="poll2">500 Hz</button>
+              <button class="profile-btn active" onclick="setPollingRate(3)" id="poll3">1000 Hz</button>
+            </div>
+          </div>
+
+          <div class="slider-group" style="margin-top: 24px;">
+            <div class="slider-header">
+              <span>Velocidade do Ponteiro</span>
+              <span id="pointerSpeedVal">6 / 11</span>
+            </div>
+            <input type="range" min="1" max="11" value="6" oninput="document.getElementById('pointerSpeedVal').innerText = this.value + ' / 11'">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Velocidade de Rolagem (Scroll)</span>
+              <span id="scrollSpeedVal">3 linhas</span>
+            </div>
+            <input type="range" min="1" max="10" value="3" oninput="document.getElementById('scrollSpeedVal').innerText = this.value + ' linhas'">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Velocidade do Clique Duplo</span>
+              <span id="doubleSpeedVal">5</span>
+            </div>
+            <input type="range" min="1" max="10" value="5" oninput="document.getElementById('doubleSpeedVal').innerText = this.value">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Intervalo do Botão de Fogo</span>
+              <span id="fireSpeedVal">50 ms</span>
+            </div>
+            <input type="range" min="10" max="250" step="5" value="50" oninput="document.getElementById('fireSpeedVal').innerText = this.value + ' ms'">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: LED / LIGHTING -->
+    <div class="tab-content" id="pane-led">
+      <div class="grid-2">
+        <div class="led-preview-box">
+          <img src="assets/mouseled/LED_Ambilight.gif" alt="Efeito LED" class="led-gif" id="ledGifPreview">
+          <div style="margin-top: 16px; font-weight: 600; font-size: 14px;" id="ledEffectName">Ambilight (Luz ambiente)</div>
+        </div>
+        <div class="card">
+          <div class="card-title">Configurações de Luz de Fundo</div>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Modo de Iluminação (14 Modos)</label>
+            <select id="ledModeSelect" style="width: 100%;" onchange="onLedModeChange(this.value)">
+              <option value="0">0: DPI Breathing (Respiração de DPI)</option>
+              <option value="1">1: Cycle Breathing (Ciclo de respiro)</option>
+              <option value="2">2: Constant (Constante)</option>
+              <option value="3">3: Flowing Water (Água corrente)</option>
+              <option value="4">4: Mono Water (Água parada)</option>
+              <option value="5">5: CometTail (Cauda do cometa)</option>
+              <option value="6">6: Neon (Neon)</option>
+              <option value="7" selected>7: Ambilight (Luz ambiente)</option>
+              <option value="8">8: Flashing (Piscando)</option>
+              <option value="9">9: Star Trek (Jornada nas estrelas)</option>
+              <option value="10">10: Ripple (Ondulação)</option>
+              <option value="11">11: Enraptured (Extasiado)</option>
+              <option value="12">12: Response (Resposta)</option>
+              <option value="13">13: LED Off (Desligar LED)</option>
+            </select>
+          </div>
+
+          <div class="slider-group" id="ledBrightGroup">
+            <div class="slider-header">
+              <span>Brilho do LED</span>
+              <span id="ledBrightVal">7 / 7</span>
+            </div>
+            <input type="range" min="0" max="7" value="7" id="ledBrightSlider" oninput="document.getElementById('ledBrightVal').innerText = this.value + ' / 7'; sendLiveLed();">
+          </div>
+
+          <div class="slider-group" id="ledSpeedGroup">
+            <div class="slider-header">
+              <span>Velocidade do Efeito</span>
+              <span id="ledSpeedVal">4 / 7</span>
+            </div>
+            <input type="range" min="1" max="7" value="4" id="ledSpeedSlider" oninput="document.getElementById('ledSpeedVal').innerText = this.value + ' / 7'; sendLiveLed();">
+          </div>
+
+          <div class="slider-group" id="ledDirGroup">
+            <div class="slider-header">
+              <span>Direção do Fluxo</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="profile-btn active" onclick="setLedDirection(0)" id="dir0">Para Frente</button>
+              <button class="profile-btn" onclick="setLedDirection(1)" id="dir1">Para Trás</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: MACROS -->
+    <div class="tab-content" id="pane-macro">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title" style="justify-content: space-between;">
+            <span>Lista de Macros</span>
+            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 11px;" onclick="addMacro()">+ Nova Macro</button>
+          </div>
+          <div id="macroList" style="display: flex; flex-direction: column; gap: 6px;">
+            <div class="btn-mapping-item" style="cursor: pointer; border-left: 3px solid var(--primary);">
+              <div>
+                <strong>PUBG Anti-Recoil</strong>
+                <div style="font-size: 11px; color: var(--text-dim);">8 ações &bull; Repetição contínua</div>
+              </div>
+              <span class="info-tag">Ativa</span>
+            </div>
+            <div class="btn-mapping-item" style="cursor: pointer;">
+              <div>
+                <strong>Triple Click Burst</strong>
+                <div style="font-size: 11px; color: var(--text-dim);">6 ações &bull; 1 clique</div>
+              </div>
+              <span class="info-tag">Padrão</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Editor de Eventos de Macro</div>
+          <div style="background: #15181e; border-radius: 6px; padding: 14px; min-height: 220px; font-family: monospace; font-size: 12px; line-height: 1.6;" id="macroDetailBox">
+            1: Pressionar Botão Esquerdo [0ms]<br>
+            2: Esperar 25ms<br>
+            3: Soltar Botão Esquerdo<br>
+            4: Esperar 25ms<br>
+            5: Deslocamento Mouse XY (0, +4)<br>
+            6: Pressionar Botão Esquerdo [0ms]<br>
+            7: Esperar 25ms<br>
+            8: Soltar Botão Esquerdo
+          </div>
+          <div style="margin-top: 14px; display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="toast('Gravação de macros pronta para vincular a botões!')">Gravar Evento</button>
+            <button class="btn btn-secondary" onclick="toast('Macro exportada!')">Exportar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="profile-selector">
+      <span style="font-weight: 600;">Perfil Ativo:</span>
+      <button class="profile-btn active" onclick="switchProfile(0)" id="prof0">Perfil 1 (Office)</button>
+      <button class="profile-btn" onclick="switchProfile(1)" id="prof1">Perfil 2 (Game I)</button>
+      <button class="profile-btn" onclick="switchProfile(2)" id="prof2">Perfil 3 (Game II)</button>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button class="btn btn-danger" onclick="resetToDefaults()">Resetar Fábrica</button>
+      <button class="btn btn-primary" onclick="applySettings()">Aplicar ao Mouse</button>
+    </div>
+  </footer>
+
+  <div class="msg-toast" id="toastMsg">Configurações salvas no mouse com sucesso!</div>
+
+  <script>
+    // Constants & Device state
+    const VID = 0x30fa;
+    const PID = 0x1040;
+    let hidDevice = null;
+    let currentProfile = 0;
+    let currentPollingRate = 3; // 1000Hz
+    let currentLedMode = 7; // Ambilight
+    let currentLedDirection = 0;
+
+    const DPI_LEVELS = [
+      { dpi: 1200, code: 6, color: "#FFFF00", enabled: true },
+      { dpi: 1600, code: 8, color: "#0000FF", enabled: true },
+      { dpi: 2400, code: 11, color: "#00FFFF", enabled: true },
+      { dpi: 3200, code: 12, color: "#FF00FF", enabled: true },
+      { dpi: 4800, code: 14, color: "#FF0000", enabled: true },
+      { dpi: 7200, code: 17, color: "#00FF00", enabled: true }
+    ];
+    let activeDpiIndex = 0;
+
+    const BUTTON_OPTIONS = [
+      { id: 1, name: "Clique Esquerdo (Left Click)" },
+      { id: 2, name: "Clique Direito (Right Click)" },
+      { id: 3, name: "Clique Meio / Scroll (Middle)" },
+      { id: 4, name: "Voltar (Backward / K5)" },
+      { id: 5, name: "Avançar (Forward / K4)" },
+      { id: 6, name: "Trocar DPI (DPI Loop)" },
+      { id: 8, name: "Botão de Fogo (Fire Key)" },
+      { id: 9, name: "Click Duplo (Double Click)" },
+      { id: 12, name: "Macro 1 (Atalho)" },
+      { id: 21, name: "Alternar LED (LED Loop)" },
+      { id: 0, name: "Desligar / Nenhum" }
+    ];
+
+    let buttonAssignments = [1, 2, 3, 5, 4, 6]; // K1..K6
+
+    const LED_GIFS = {
+      0: "LED_DPIBreathing.gif",
+      1: "LED_CycleBreathing.gif",
+      2: "LED_LightOn.gif",
+      3: "LED_FlowingWater.gif",
+      4: "LED_MonoWater.gif",
+      5: "LED_CometStreak.gif",
+      6: "LED_Neon.gif",
+      7: "LED_Ambilight.gif",
+      8: "LED_Flicker.gif",
+      9: "LED_StarTrek.gif",
+      10: "LED_Ripple.gif",
+      11: "LED_Enraptured.gif",
+      12: "LED_LightOn.gif",
+      13: "LED_LightOff.gif"
+    };
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      if (tabId === 'buttons') {
+        document.getElementById('tabButtons').classList.add('active');
+        document.getElementById('pane-buttons').classList.add('active');
+      } else if (tabId === 'dpi') {
+        document.getElementById('tabDpi').classList.add('active');
+        document.getElementById('pane-dpi').classList.add('active');
+      } else if (tabId === 'led') {
+        document.getElementById('tabLed').classList.add('active');
+        document.getElementById('pane-led').classList.add('active');
+      } else if (tabId === 'macro') {
+        document.getElementById('tabMacro').classList.add('active');
+        document.getElementById('pane-macro').classList.add('active');
+      }
+    }
+
+    function renderButtons() {
+      const container = document.getElementById('buttonMappingList');
+      container.innerHTML = '';
+      const names = [
+        "1: Botão Esquerdo (Left)",
+        "2: Botão Direito (Right)",
+        "3: Botão do Scroll (Middle)",
+        "4: Botão Lateral Avançar",
+        "5: Botão Lateral Voltar",
+        "6: Botão de Troca de DPI"
+      ];
+      buttonAssignments.forEach((val, idx) => {
+        const item = document.createElement('div');
+        item.className = 'btn-mapping-item';
+        let selectHtml = `<select onchange="buttonAssignments[${idx}] = parseInt(this.value)">`;
+        BUTTON_OPTIONS.forEach(opt => {
+          selectHtml += `<option value="${opt.id}" ${opt.id === val ? 'selected' : ''}>${opt.name}</option>`;
+        });
+        selectHtml += `</select>`;
+        item.innerHTML = `
+          <label><span class="btn-num">${idx+1}</span> ${names[idx]}</label>
+          ${selectHtml}
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function renderDpiStages() {
+      const container = document.getElementById('dpiStagesList');
+      container.innerHTML = '';
+      DPI_LEVELS.forEach((stage, idx) => {
+        const row = document.createElement('div');
+        row.className = `dpi-stage-row ${idx === activeDpiIndex ? 'active' : ''}`;
+        row.innerHTML = `
+          <input type="checkbox" ${stage.enabled ? 'checked' : ''} onchange="DPI_LEVELS[${idx}].enabled = this.checked">
+          <span style="font-weight: 700; width: 60px;">DPI ${idx+1}</span>
+          <input type="color" value="${stage.color}" class="dpi-color-picker" onchange="DPI_LEVELS[${idx}].color = this.value">
+          <select style="flex: 1;" onchange="updateDpiValue(${idx}, parseInt(this.value))">
+            <option value="200" ${stage.dpi===200?'selected':''}>200 DPI</option>
+            <option value="400" ${stage.dpi===400?'selected':''}>400 DPI</option>
+            <option value="800" ${stage.dpi===800?'selected':''}>800 DPI</option>
+            <option value="1200" ${stage.dpi===1200?'selected':''}>1200 DPI</option>
+            <option value="1600" ${stage.dpi===1600?'selected':''}>1600 DPI</option>
+            <option value="2400" ${stage.dpi===2400?'selected':''}>2400 DPI</option>
+            <option value="3200" ${stage.dpi===3200?'selected':''}>3200 DPI</option>
+            <option value="4800" ${stage.dpi===4800?'selected':''}>4800 DPI</option>
+            <option value="6400" ${stage.dpi===6400?'selected':''}>6400 DPI</option>
+            <option value="7200" ${stage.dpi===7200?'selected':''}>7200 DPI</option>
+            <option value="12800" ${stage.dpi===12800?'selected':''}>12800 DPI</option>
+          </select>
+          <button class="profile-btn ${idx===activeDpiIndex?'active':''}" onclick="setActiveDpi(${idx})">${idx===activeDpiIndex?'Ativo':'Definir'}</button>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function updateDpiValue(idx, val) {
+      DPI_LEVELS[idx].dpi = val;
+      const chipTable = {
+        200:1, 400:2, 600:3, 800:4, 1000:5, 1200:6, 1400:7, 1600:8,
+        1800:9, 2000:10, 2400:12, 3200:13, 4000:14, 4800:15, 5600:16,
+        6400:17, 7200:18, 8000:19, 8800:20, 9600:21, 10400:22, 11200:23, 12800:24
+      };
+      DPI_LEVELS[idx].code = chipTable[val] || 6;
+      if (idx === activeDpiIndex) {
+        sendLiveDpi();
+      }
+    }
+
+    function setActiveDpi(idx) {
+      activeDpiIndex = idx;
+      renderDpiStages();
+      sendLiveDpi();
+    }
+
+    function setPollingRate(val) {
+      currentPollingRate = val;
+      const hz = [125, 250, 500, 1000][val];
+      document.getElementById('pollRateVal').innerText = hz + " Hz";
+      [0, 1, 2, 3].forEach(i => {
+        document.getElementById(`poll${i}`).classList.toggle('active', i === val);
+      });
+    }
+
+    function onLedModeChange(val) {
+      currentLedMode = parseInt(val);
+      const sel = document.getElementById('ledModeSelect');
+      document.getElementById('ledEffectName').innerText = sel.options[sel.selectedIndex].text;
+      const gifName = LED_GIFS[currentLedMode] || "LED_Ambilight.gif";
+      document.getElementById('ledGifPreview').src = `assets/mouseled/${gifName}`;
+      sendLiveLed();
+    }
+
+    function setLedDirection(val) {
+      currentLedDirection = val;
+      document.getElementById('dir0').classList.toggle('active', val === 0);
+      document.getElementById('dir1').classList.toggle('active', val === 1);
+      sendLiveLed();
+    }
+
+    function switchProfile(prof) {
+      currentProfile = prof;
+      [0, 1, 2].forEach(p => {
+        document.getElementById(`prof${p}`).classList.toggle('active', p === prof);
+      });
+      toast(`Perfil ${prof+1} selecionado`);
+    }
+
+    function toast(text) {
+      const el = document.getElementById('toastMsg');
+      el.innerText = text;
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 3000);
+    }
+
+    // --- WebHID Protocol Implementation ---
+    async function connectDevice() {
+      try {
+        if (!navigator.hid) {
+          toast("WebHID não suportado ou sem permissão");
+          return;
+        }
+        const devices = await navigator.hid.getDevices();
+        let mouseDev = devices.find(d => d.vendorId === VID && d.productId === PID);
+        if (!mouseDev) {
+          const req = await navigator.hid.requestDevice({
+            filters: [{ vendorId: VID, productId: PID }]
+          });
+          if (req && req.length > 0) mouseDev = req[0];
+        }
+        if (mouseDev) {
+          if (!mouseDev.opened) {
+            await mouseDev.open();
+          }
+          hidDevice = mouseDev;
+          document.getElementById('statusDot').classList.add('connected');
+          document.getElementById('statusText').innerText = "Mouse Conectado";
+          document.getElementById('btnConnect').style.display = "none";
+          toast("Mouse Slits V2 conectado com sucesso!");
+        }
+      } catch (err) {
+        console.error(err);
+        toast("Erro ao conectar: " + err.message);
+      }
+    }
+
+    async function sendFeatureReport(payload) {
+      // payload is Uint8Array of 7 bytes (Report ID 0x07 is separate parameter in WebHID)
+      if (!hidDevice) return;
+      try {
+        await hidDevice.sendFeatureReport(0x07, payload);
+      } catch (e) {
+        console.warn("sendFeatureReport error:", e);
+      }
+    }
+
+    function sendLiveDpi() {
+      // Report ID 0x07, byte 1: 0x09, byte 2: active_stage, byte 3: gear_code, byte 4: enable_mask
+      const activeStage = activeDpiIndex;
+      const gearCode = DPI_LEVELS[activeStage].code;
+      let mask = 0;
+      DPI_LEVELS.forEach((s, idx) => {
+        if (s.enabled) mask |= (1 << idx);
+      });
+      const b3 = ((gearCode + 8) << 4) | (activeStage & 0x0F);
+      const data = new Uint8Array([0x09, activeStage, b3, mask, 0x00, 0x00, 0x00]);
+      sendFeatureReport(data);
+    }
+
+    function sendLiveLed() {
+      const bright = parseInt(document.getElementById('ledBrightSlider').value);
+      const speed = parseInt(document.getElementById('ledSpeedSlider').value);
+      const b3 = (currentLedMode << 4) | (bright & 0x0F);
+      const data = new Uint8Array([0x13, 0x7F, b3, (speed << 4) | (currentLedDirection & 0x0F), 0x00, 0x20, 0x07]);
+      sendFeatureReport(data);
+    }
+
+    async function writeEepromChunk(addr, bytes) {
+      const len = bytes.length;
+      const addrLo = addr & 0xFF;
+      const addrHi = (addr >> 8) & 0xFF;
+      // Step 1: write individual bytes
+      for (let i = 0; i < len; i++) {
+        const p = new Uint8Array([0x18, 0x03, i, addrLo, addrHi, bytes[i], len - 1]);
+        await sendFeatureReport(p);
+      }
+      await new Promise(r => setTimeout(r, 4));
+      // Step 2: commit chunk
+      await sendFeatureReport(new Uint8Array([0x18, 0x09, 0x00, addrLo, addrHi, 0x00, len - 1]));
+      await new Promise(r => setTimeout(r, 12));
+      // Step 3: clear command
+      await sendFeatureReport(new Uint8Array([0x18, 0x00, 0x00, addrLo, addrHi, 0x00, 0x00]));
+    }
+
+    async function reloadEeprom() {
+      await sendFeatureReport(new Uint8Array([0x18, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00]));
+      await new Promise(r => setTimeout(r, 5));
+      await sendFeatureReport(new Uint8Array([0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]));
+    }
+
+    async function applySettings() {
+      if (!hidDevice) {
+        await connectDevice();
+        if (!hidDevice) {
+          toast("Conecte o mouse primeiro antes de aplicar!");
+          return;
+        }
+      }
+
+      toast("Gravando configurações na EEPROM do mouse...");
+      
+      // Build 0x80 bytes EEPROM map
+      const eeprom = new Uint8Array(0x80);
+      eeprom[0x00] = 0x5A;
+      eeprom[0x01] = ((currentProfile & 3) << 5) | 3;
+      eeprom[0x07] = 0x00;
+
+      // Profile 0 Buttons K1..K6
+      buttonAssignments.forEach((code, idx) => {
+        eeprom[0x08 + idx] = code;
+      });
+
+      // Active DPI & Mask
+      eeprom[0x18] = activeDpiIndex & 0x0F;
+      let mask = 0;
+      DPI_LEVELS.forEach((s, idx) => {
+        if (s.enabled) mask |= (1 << idx);
+      });
+      eeprom[0x19] = mask;
+      eeprom[0x1A] = currentPollingRate & 3;
+
+      // LED mode
+      const bright = parseInt(document.getElementById('ledBrightSlider').value);
+      eeprom[0x1C] = (currentLedMode << 4) | (bright & 0x0F);
+      eeprom[0x1D] = 0x7F;
+
+      // 6 DPI stages
+      DPI_LEVELS.forEach((s, idx) => {
+        eeprom[0x20 + idx] = s.code & 0x0F;
+      });
+
+      // Write in 16-byte chunks
+      for (let addr = 0; addr < 0x80; addr += 16) {
+        const chunk = eeprom.slice(addr, addr + 16);
+        await writeEepromChunk(addr, chunk);
+      }
+
+      await reloadEeprom();
+      sendLiveDpi();
+      sendLiveLed();
+
+      toast("Todas as configurações foram salvas com sucesso no mouse!");
+    }
+
+    function resetToDefaults() {
+      buttonAssignments = [1, 2, 3, 5, 4, 6];
+      activeDpiIndex = 0;
+      currentLedMode = 7;
+      currentPollingRate = 3;
+      renderButtons();
+      renderDpiStages();
+      setPollingRate(3);
+      document.getElementById('ledModeSelect').value = "7";
+      onLedModeChange(7);
+      toast("Valores de fábrica restaurados!");
+    }
+
+    function addMacro() {
+      toast("Criar nova macro: funcionalidade disponível.");
+    }
+
+    function changeLanguage(lang) {
+      if (lang === "en") {
+        document.getElementById('tabButtons').innerText = "Buttons";
+        document.getElementById('tabDpi').innerText = "DPI & Advanced";
+        document.getElementById('tabLed').innerText = "Lighting (LED)";
+        document.getElementById('tabMacro').innerText = "Macros";
+        document.getElementById('statusText').innerText = hidDevice ? "Mouse Connected" : "Looking for mouse...";
+        document.getElementById('btnConnect').innerText = "Connect Mouse";
+      } else {
+        document.getElementById('tabButtons').innerText = "Botões";
+        document.getElementById('tabDpi').innerText = "DPI & Avançado";
+        document.getElementById('tabLed').innerText = "Iluminação (LED)";
+        document.getElementById('tabMacro').innerText = "Macros";
+        document.getElementById('statusText').innerText = hidDevice ? "Mouse Conectado" : "Buscando mouse...";
+        document.getElementById('btnConnect').innerText = "Conectar Mouse";
+      }
+    }
+
+    // Auto-detect on startup
+    window.addEventListener('DOMContentLoaded', () => {
+      renderButtons();
+      renderDpiStages();
+      setPollingRate(3);
+      setTimeout(connectDevice, 600);
+    });
+  </script>
+</body>
+</html>

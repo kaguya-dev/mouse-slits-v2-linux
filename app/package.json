@@ -1,0 +1,44 @@
+{
+  "name": "mouse-slits-v2",
+  "productName": "Mouse Slits V2",
+  "version": "1.0.0",
+  "description": "Mouse Slits V2 Linux Configurator",
+  "main": "main/index.js",
+  "author": {
+    "name": "Clanm / SDCX",
+    "email": "noreply@example.com"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "cross-env": "^7.0.3",
+    "electron-squirrel-startup": "^1.0.0"
+  },
+  "homepage": "https://github.com/kaguya-dev/mouse-slits-v2-linux",
+  "devDependencies": {
+    "electron": "30.5.1",
+    "electron-builder": "^25.1.8"
+  },
+  "scripts": {
+    "dist": "electron-builder --linux AppImage tar.gz"
+  },
+  "build": {
+    "appId": "com.clanm.mouseslitsv2",
+    "productName": "Mouse Slits V2",
+    "directories": {
+      "output": "../dist",
+      "buildResources": "buildres"
+    },
+    "files": [
+      "**/*"
+    ],
+    "linux": {
+      "category": "Utility",
+      "icon": "main/assets/icon.png",
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "artifactName": "Mouse-Slits-V2-${version}-linux-${arch}.${ext}"
+    }
+  }
+}
