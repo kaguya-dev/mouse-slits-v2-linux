@@ -105,26 +105,25 @@ const createWindow = () => {
       const matched = details.deviceList.find(d => getPermission(d.vendorId, d.productId));
       if (matched) {
         callback(matched.deviceId);
+        return;
       }
     }
+    // Nothing matched: answer anyway so the renderer's requestDevice() does not hang
+    callback('');
   });
 
   mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
     if (details && details.device) {
-      if (permission === 'hid' && getPermission(details.device.vendorId, details.device.productId)) {
-        return true;
-      }
+      return permission === 'hid' && getPermission(details.device.vendorId, details.device.productId);
     }
-    return true;
+    return permission === 'hid';
   });
 
   mainWindow.webContents.session.setDevicePermissionHandler((details) => {
     if (details && details.device) {
-      if (details.deviceType === 'hid' && getPermission(details.device.vendorId, details.device.productId)) {
-        return true;
-      }
+      return details.deviceType === 'hid' && getPermission(details.device.vendorId, details.device.productId);
     }
-    return true;
+    return false;
   });
 
   mainWindow.loadFile(path.join(__dirname, '../build/index.html'));

@@ -589,7 +589,7 @@
     </div>
     <div style="display: flex; gap: 10px;">
       <button class="btn btn-danger" onclick="resetToDefaults()">Resetar Fábrica</button>
-      <button class="btn btn-primary" onclick="applySettings()">Aplicar ao Mouse</button>
+      <button class="btn btn-primary" id="btnApply" onclick="applySettings()">Aplicar ao Mouse</button>
     </div>
   </footer>
 
@@ -613,7 +613,10 @@
       { dpi: 4800, code: 14, color: "#FF0000", enabled: true },
       { dpi: 7200, code: 17, color: "#00FF00", enabled: true }
     ];
+    const DPI_DEFAULTS = DPI_LEVELS.map(s => ({ ...s }));
     let activeDpiIndex = 0;
+    let applying = false;
+    let connecting = false;
 
     const BUTTON_OPTIONS = [
       { id: 1, name: "Clique Esquerdo (Left Click)" },
@@ -700,7 +703,7 @@
         const row = document.createElement('div');
         row.className = `dpi-stage-row ${idx === activeDpiIndex ? 'active' : ''}`;
         row.innerHTML = `
-          <input type="checkbox" ${stage.enabled ? 'checked' : ''} onchange="DPI_LEVELS[${idx}].enabled = this.checked">
+          <input type="checkbox" ${stage.enabled ? 'checked' : ''} onchange="toggleStage(${idx}, this)">
           <span style="font-weight: 700; width: 60px;">DPI ${idx+1}</span>
           <input type="color" value="${stage.color}" class="dpi-color-picker" onchange="DPI_LEVELS[${idx}].color = this.value">
           <select style="flex: 1;" onchange="updateDpiValue(${idx}, parseInt(this.value))">
@@ -722,20 +725,52 @@
       });
     }
 
+    // Single source of truth: DPI -> chip gear code.
+    // 200..2000 step 200 => 1..10, 2400 => 11, then 800 steps: 3200 => 12 ... 12800 => 24
+    const DPI_CODE_TABLE = {
+      200:1, 400:2, 600:3, 800:4, 1000:5, 1200:6, 1400:7, 1600:8, 1800:9, 2000:10,
+      2400:11, 3200:12, 4000:13, 4800:14, 5600:15, 6400:16, 7200:17,
+      8000:18, 8800:19, 9600:20, 10400:21, 11200:22, 12000:23, 12800:24
+    };
+
     function updateDpiValue(idx, val) {
+      if (!Number.isFinite(val) || !(val in DPI_CODE_TABLE)) {
+        toast("Valor de DPI inválido: " + val);
+        renderDpiStages();
+        return;
+      }
       DPI_LEVELS[idx].dpi = val;
-      const chipTable = {
-        200:1, 400:2, 600:3, 800:4, 1000:5, 1200:6, 1400:7, 1600:8,
-        1800:9, 2000:10, 2400:12, 3200:13, 4000:14, 4800:15, 5600:16,
-        6400:17, 7200:18, 8000:19, 8800:20, 9600:21, 10400:22, 11200:23, 12800:24
-      };
-      DPI_LEVELS[idx].code = chipTable[val] || 6;
+      DPI_LEVELS[idx].code = DPI_CODE_TABLE[val];
       if (idx === activeDpiIndex) {
         sendLiveDpi();
       }
     }
 
+    function toggleStage(idx, checkbox) {
+      const stage = DPI_LEVELS[idx];
+      if (!checkbox.checked) {
+        const othersEnabled = DPI_LEVELS.some((s, i) => i !== idx && s.enabled);
+        if (!othersEnabled) {
+          checkbox.checked = true;
+          toast("Pelo menos um estágio de DPI deve ficar ativo");
+          return;
+        }
+        stage.enabled = false;
+        if (idx === activeDpiIndex) {
+          activeDpiIndex = DPI_LEVELS.findIndex(s => s.enabled);
+        }
+      } else {
+        stage.enabled = true;
+      }
+      renderDpiStages();
+      sendLiveDpi();
+    }
+
     function setActiveDpi(idx) {
+      if (!DPI_LEVELS[idx] || !DPI_LEVELS[idx].enabled) {
+        toast("Ative este estágio antes de defini-lo como atual");
+        return;
+      }
       activeDpiIndex = idx;
       renderDpiStages();
       sendLiveDpi();
@@ -783,6 +818,8 @@
 
     // --- WebHID Protocol Implementation ---
     async function connectDevice() {
+      if (connecting) return;
+      connecting = true;
       try {
         if (!navigator.hid) {
           toast("WebHID não suportado ou sem permissão");
@@ -809,20 +846,37 @@
       } catch (err) {
         console.error(err);
         toast("Erro ao conectar: " + err.message);
+      } finally {
+        connecting = false;
       }
     }
 
-    async function sendFeatureReport(payload) {
-      // payload is Uint8Array of 7 bytes (Report ID 0x07 is separate parameter in WebHID)
-      if (!hidDevice) return;
-      try {
-        await hidDevice.sendFeatureReport(0x07, payload);
-      } catch (e) {
-        console.warn("sendFeatureReport error:", e);
-      }
+    function markDisconnected() {
+      hidDevice = null;
+      document.getElementById('statusDot').classList.remove('connected');
+      document.getElementById('statusText').innerText = "Mouse desconectado";
+      document.getElementById('btnConnect').style.display = "";
+    }
+
+    // All reports go through one queue so they never interleave. Resolves true/false, never rejects.
+    let sendChain = Promise.resolve(true);
+    function sendFeatureReport(payload) {
+      const p = sendChain.then(async () => {
+        if (!hidDevice) return false;
+        try {
+          await hidDevice.sendFeatureReport(0x07, payload);
+          return true;
+        } catch (e) {
+          console.warn("sendFeatureReport error:", e);
+          return false;
+        }
+      });
+      sendChain = p;
+      return p;
     }
 
     function sendLiveDpi() {
+      if (applying) return;
       // Report ID 0x07, byte 1: 0x09, byte 2: active_stage, byte 3: gear_code, byte 4: enable_mask
       const activeStage = activeDpiIndex;
       const gearCode = DPI_LEVELS[activeStage].code;
@@ -830,12 +884,13 @@
       DPI_LEVELS.forEach((s, idx) => {
         if (s.enabled) mask |= (1 << idx);
       });
-      const b3 = ((gearCode + 8) << 4) | (activeStage & 0x0F);
-      const data = new Uint8Array([0x09, activeStage, b3, mask, 0x00, 0x00, 0x00]);
+      // gear code needs 5 bits (up to 24): keep it whole in its own byte instead of overflowing a nibble
+      const data = new Uint8Array([0x09, activeStage, gearCode & 0xFF, mask, 0x00, 0x00, 0x00]);
       sendFeatureReport(data);
     }
 
     function sendLiveLed() {
+      if (applying) return;
       const bright = parseInt(document.getElementById('ledBrightSlider').value);
       const speed = parseInt(document.getElementById('ledSpeedSlider').value);
       const b3 = (currentLedMode << 4) | (bright & 0x0F);
@@ -843,30 +898,40 @@
       sendFeatureReport(data);
     }
 
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
     async function writeEepromChunk(addr, bytes) {
       const len = bytes.length;
       const addrLo = addr & 0xFF;
       const addrHi = (addr >> 8) & 0xFF;
-      // Step 1: write individual bytes
       for (let i = 0; i < len; i++) {
-        const p = new Uint8Array([0x18, 0x03, i, addrLo, addrHi, bytes[i], len - 1]);
-        await sendFeatureReport(p);
+        if (!await sendFeatureReport(new Uint8Array([0x18, 0x03, i, addrLo, addrHi, bytes[i], len - 1]))) return false;
       }
-      await new Promise(r => setTimeout(r, 4));
-      // Step 2: commit chunk
-      await sendFeatureReport(new Uint8Array([0x18, 0x09, 0x00, addrLo, addrHi, 0x00, len - 1]));
-      await new Promise(r => setTimeout(r, 12));
-      // Step 3: clear command
-      await sendFeatureReport(new Uint8Array([0x18, 0x00, 0x00, addrLo, addrHi, 0x00, 0x00]));
+      await sleep(4);
+      if (!await sendFeatureReport(new Uint8Array([0x18, 0x09, 0x00, addrLo, addrHi, 0x00, len - 1]))) return false;
+      await sleep(12);
+      return sendFeatureReport(new Uint8Array([0x18, 0x00, 0x00, addrLo, addrHi, 0x00, 0x00]));
     }
 
     async function reloadEeprom() {
-      await sendFeatureReport(new Uint8Array([0x18, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00]));
-      await new Promise(r => setTimeout(r, 5));
-      await sendFeatureReport(new Uint8Array([0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]));
+      if (!await sendFeatureReport(new Uint8Array([0x18, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00]))) return false;
+      await sleep(5);
+      return sendFeatureReport(new Uint8Array([0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]));
     }
 
     async function applySettings() {
+      if (applying) return;
+      applying = true;
+      try {
+        await doApplySettings();
+      } finally {
+        applying = false;
+        document.getElementById('btnApply').disabled = false;
+      }
+    }
+
+    async function doApplySettings() {
+      document.getElementById('btnApply').disabled = true;
       if (!hidDevice) {
         await connectDevice();
         if (!hidDevice) {
@@ -885,7 +950,7 @@
 
       // Profile 0 Buttons K1..K6
       buttonAssignments.forEach((code, idx) => {
-        eeprom[0x08 + idx] = code;
+        eeprom[0x08 + idx] = Math.max(0, Math.min(255, code | 0));
       });
 
       // Active DPI & Mask
@@ -904,33 +969,53 @@
 
       // 6 DPI stages
       DPI_LEVELS.forEach((s, idx) => {
-        eeprom[0x20 + idx] = s.code & 0x0F;
+        eeprom[0x20 + idx] = s.code & 0xFF;
       });
 
       // Write in 16-byte chunks
       for (let addr = 0; addr < 0x80; addr += 16) {
         const chunk = eeprom.slice(addr, addr + 16);
-        await writeEepromChunk(addr, chunk);
+        if (!await writeEepromChunk(addr, chunk)) {
+          toast("Falha ao gravar no mouse (bloco 0x" + addr.toString(16) + "). Operação abortada.");
+          return;
+        }
       }
 
-      await reloadEeprom();
+      if (!await reloadEeprom()) {
+        toast("Falha ao recarregar a EEPROM do mouse.");
+        return;
+      }
+      applying = false;
       sendLiveDpi();
       sendLiveLed();
+      applying = true;
 
       toast("Todas as configurações foram salvas com sucesso no mouse!");
     }
 
     function resetToDefaults() {
       buttonAssignments = [1, 2, 3, 5, 4, 6];
+      DPI_LEVELS.splice(0, DPI_LEVELS.length, ...DPI_DEFAULTS.map(x => ({ ...x })));
       activeDpiIndex = 0;
       currentLedMode = 7;
+      currentLedDirection = 0;
       currentPollingRate = 3;
+      const bright = document.getElementById('ledBrightSlider');
+      const speed = document.getElementById('ledSpeedSlider');
+      bright.value = 7;
+      speed.value = 4;
+      document.getElementById('ledBrightVal').innerText = '7 / 7';
+      document.getElementById('ledSpeedVal').innerText = '4 / 7';
+      document.getElementById('dir0').classList.add('active');
+      document.getElementById('dir1').classList.remove('active');
       renderButtons();
       renderDpiStages();
       setPollingRate(3);
       document.getElementById('ledModeSelect').value = "7";
       onLedModeChange(7);
-      toast("Valores de fábrica restaurados!");
+      switchProfile(0);
+      sendLiveDpi();
+      toast("Valores de fábrica restaurados na interface. Clique em Aplicar para gravar no mouse.");
     }
 
     function addMacro() {
@@ -960,6 +1045,11 @@
       renderButtons();
       renderDpiStages();
       setPollingRate(3);
+      if (navigator.hid && navigator.hid.addEventListener) {
+        navigator.hid.addEventListener('disconnect', e => {
+          if (hidDevice && e.device === hidDevice) markDisconnected();
+        });
+      }
       setTimeout(connectDevice, 600);
     });
   </script>
