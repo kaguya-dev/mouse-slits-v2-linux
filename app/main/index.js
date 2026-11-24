@@ -19,8 +19,9 @@ function findHidrawPath() {
       const ueventPath = `/sys/class/hidraw/hidraw${i}/device/uevent`;
       if (fs.existsSync(ueventPath)) {
         const uevent = fs.readFileSync(ueventPath, 'utf8');
-        // Match 30fa:1040 (case-insensitive)
-        if (/30fa.*1040/i.test(uevent) || /1040.*30fa/i.test(uevent)) {
+        // Match any supported VID:PID from vid_pid_offline.js (HID_ID=0003:0000VVVV:0000PPPP)
+        const m = /HID_ID=[0-9A-F]+:0*([0-9A-F]+):0*([0-9A-F]+)/i.exec(uevent);
+        if (m && getPermission(parseInt(m[1], 16), parseInt(m[2], 16))) {
           // Check report descriptor for 0xFF01 or usage 0x07
           const rdescPath = `/sys/class/hidraw/hidraw${i}/device/report_descriptor`;
           if (fs.existsSync(rdescPath)) {

@@ -1,2 +1,3 @@
-# Clanm Mouse Slits V2 (A825 Gaming Mouse)
+# Clanm Mouse Slits V2 (A825 Gaming Mouse) - known USB product IDs
 KERNEL=="hidraw*", ATTRS{idVendor}=="30fa", ATTRS{idProduct}=="1040", MODE="0660", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="30fa", ATTRS{idProduct}=="1201", MODE="0660", TAG+="uaccess"

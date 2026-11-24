@@ -4,7 +4,7 @@
 [![Platform](https://img.shields.io/badge/platform-Linux%20x86__64-orange?logo=linux)](https://github.com/kaguya-dev/mouse-slits-v2-linux/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Configurador oficial e nativo para Linux do mouse gamer **Clanm Mouse Slits V2** (controlador Wuxi Instant Microelectronics **A825**, USB ID `30fa:1040`).
+Configurador oficial e nativo para Linux do mouse gamer **Clanm Mouse Slits V2** (controlador Wuxi Instant Microelectronics **A825**, USB IDs `30fa:1040` / `30fa:1201`).
 
 Permite configurar todos os botões, DPI, Polling Rate, macros e os 14 modos de iluminação RGB diretamente no Linux, sem necessidade de Wine.
 
@@ -23,7 +23,7 @@ sudo curl -sSL https://raw.githubusercontent.com/kaguya-dev/mouse-slits-v2-linux
 
 #### Opção B (One-liner com `echo` — 100% autônomo):
 ```bash
-sudo sh -c 'echo "KERNEL==\"hidraw*\", ATTRS{idVendor}==\"30fa\", ATTRS{idProduct}==\"1040\", MODE=\"0660\", TAG+=\"uaccess\"" > /etc/udev/rules.d/70-mouse-slits-v2.rules' && sudo udevadm control --reload-rules && sudo udevadm trigger
+sudo sh -c 'printf "KERNEL==\"hidraw*\", ATTRS{idVendor}==\"30fa\", ATTRS{idProduct}==\"1040\", MODE=\"0660\", TAG+=\"uaccess\"\nKERNEL==\"hidraw*\", ATTRS{idVendor}==\"30fa\", ATTRS{idProduct}==\"1201\", MODE=\"0660\", TAG+=\"uaccess\"\n" > /etc/udev/rules.d/70-mouse-slits-v2.rules' && sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
 ---
@@ -86,3 +86,13 @@ Os binários compilados estarão na pasta `dist/`.
 
 ## 📄 Licença
 Distribuído sob a licença MIT.
+
+
+---
+
+## 🛠️ Mouse não reconhecido?
+
+1. Veja o ID do seu mouse: `lsusb | grep -i 30fa`. IDs suportados: `30fa:1040` e `30fa:1201`.
+2. Verifique as permissões: `ls -l /dev/hidraw*`. Se aparecer `crw------- root`, a regra udev não foi aplicada: reinstale a regra acima e **desconecte e reconecte o mouse** (às vezes é preciso relogar).
+3. AppImage não abre? Rode com `--appimage-extract-and-run`. No `tar.gz`, se o sandbox reclamar, use `--no-sandbox`.
+4. Outro ID? Abra uma issue com a saída de `lsusb` e de `for h in /sys/class/hidraw/hidraw*; do grep -E "HID_ID|HID_NAME" $h/device/uevent; done`.

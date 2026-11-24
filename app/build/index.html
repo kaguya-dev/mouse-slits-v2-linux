@@ -376,7 +376,7 @@
       <img src="assets/icon.png" alt="Mouse Slits V2">
       <div>
         <h1>Clanm Mouse Slits V2</h1>
-        <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Wuxi Instant A825 &bull; VID 30fa : PID 1040</div>
+        <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Wuxi Instant A825 &bull; VID 30fa : PID 1040 / 1201</div>
       </div>
       <span>Linux Native</span>
     </div>
@@ -598,7 +598,7 @@
   <script>
     // Constants & Device state
     const VID = 0x30fa;
-    const PID = 0x1040;
+    const SUPPORTED_PIDS = [0x1040, 0x1201];
     let hidDevice = null;
     let currentProfile = 0;
     let currentPollingRate = 3; // 1000Hz
@@ -826,10 +826,10 @@
           return;
         }
         const devices = await navigator.hid.getDevices();
-        let mouseDev = devices.find(d => d.vendorId === VID && d.productId === PID);
+        let mouseDev = devices.find(d => d.vendorId === VID && SUPPORTED_PIDS.includes(d.productId));
         if (!mouseDev) {
           const req = await navigator.hid.requestDevice({
-            filters: [{ vendorId: VID, productId: PID }]
+            filters: SUPPORTED_PIDS.map(productId => ({ vendorId: VID, productId }))
           });
           if (req && req.length > 0) mouseDev = req[0];
         }

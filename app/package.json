@@ -1,7 +1,7 @@
 {
   "name": "mouse-slits-v2",
   "productName": "Mouse Slits V2",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Mouse Slits V2 Linux Configurator",
   "main": "main/index.js",
   "author": {
