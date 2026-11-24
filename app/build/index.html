@@ -817,6 +817,16 @@
     }
 
     // --- WebHID Protocol Implementation ---
+    // The mouse exposes several HID interfaces under one VID/PID. Only the vendor one
+    // (usage page 0xFF01, feature report ID 7) accepts configuration commands.
+    function isConfigInterface(d) {
+      return (d.collections || []).some(c =>
+        c.usagePage === 0xFF01 || (c.featureReports || []).some(r => r.reportId === 7));
+    }
+    function pickConfigInterface(list) {
+      return list.find(isConfigInterface) || null;
+    }
+
     async function connectDevice() {
       if (connecting) return;
       connecting = true;
@@ -826,12 +836,18 @@
           return;
         }
         const devices = await navigator.hid.getDevices();
-        let mouseDev = devices.find(d => d.vendorId === VID && SUPPORTED_PIDS.includes(d.productId));
+        const matching = list => (list || []).filter(d => d.vendorId === VID && SUPPORTED_PIDS.includes(d.productId));
+        let mouseDev = pickConfigInterface(matching(devices));
         if (!mouseDev) {
           const req = await navigator.hid.requestDevice({
             filters: SUPPORTED_PIDS.map(productId => ({ vendorId: VID, productId }))
           });
-          if (req && req.length > 0) mouseDev = req[0];
+          const candidates = matching(req);
+          mouseDev = pickConfigInterface(candidates);
+          if (!mouseDev && candidates.length > 0) {
+            toast("Mouse encontrado, mas sem a interface de configuração (relatório 7).");
+            return;
+          }
         }
         if (mouseDev) {
           if (!mouseDev.opened) {
@@ -860,6 +876,7 @@
 
     // All reports go through one queue so they never interleave. Resolves true/false, never rejects.
     let sendChain = Promise.resolve(true);
+    let lastSendError = '';
     function sendFeatureReport(payload) {
       const p = sendChain.then(async () => {
         if (!hidDevice) return false;
@@ -868,6 +885,7 @@
           return true;
         } catch (e) {
           console.warn("sendFeatureReport error:", e);
+          lastSendError = (e && e.message) || String(e);
           return false;
         }
       });
@@ -976,7 +994,7 @@
       for (let addr = 0; addr < 0x80; addr += 16) {
         const chunk = eeprom.slice(addr, addr + 16);
         if (!await writeEepromChunk(addr, chunk)) {
-          toast("Falha ao gravar no mouse (bloco 0x" + addr.toString(16) + "). Operação abortada.");
+          toast("Falha ao gravar no mouse (bloco 0x" + addr.toString(16) + ")" + (lastSendError ? ": " + lastSendError : "") + ". Operação abortada.");
           return;
         }
       }
